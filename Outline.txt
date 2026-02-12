@@ -1,0 +1,33 @@
+
+
+
+program parses user argument for the file to encrypt
+
+program loads 1kb or 1mb chunks of the file
+so if the file is 1.5kb, it would load 1kb, then 500b and end
+
+
+and for each chunk, encryption is applied and is then written to an output file
+
+
+input file = file.read("input");
+buffer  = byte[1000]
+
+//[255,22,12,0,200,222,100]
+
+for each chunk in file:
+    file.readbytes(buffer)
+    encrypted chunk = encrypt (chunk)
+
+    outputfile.write(encrypted chunk)
+
+
+
+something like that
+
+i'm unsure if we can do encryption one chunk at a time though
+like encrypt "hello world" might = "jrr;;p/ept;f", but encrpt "hello" and encrypt "world" might equal something else
+like the encryption is non-local?
+
+but that also might not matter
+

@@ -11,10 +11,14 @@
             "cargo": {
                 "args": [
                     "run",
-                    "--bin=rsa_encrypter"
+                    "--bin=rsa_encrypter",
                 ]
             },
-            "args": []
+            "args": [
+                "test123",
+                "--chunksize",
+                "2048"
+            ]
         },
         {
             "name": "Debug unit tests in executable 'rsa_encrypter'",
@@ -27,5 +31,5 @@
                 ]
             }
         }
-    ]
+    ],
 }

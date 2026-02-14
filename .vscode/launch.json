@@ -15,9 +15,9 @@
                 ]
             },
             "args": [
-                "test123",
+                "test_resources/FileThatExistsTxt.txt",
                 "--chunksize",
-                "2048"
+                "15"
             ]
         },
         {

@@ -9,6 +9,7 @@ pub struct Config {
     pub fp_in: PathBuf,          // Location of the input file.
     pub fp_out: Option<PathBuf>, // Optional location of output file. If None then same as input file's folder
     pub chunk_size: usize,       // How large each data chunk read from the input file is
+    pub no_max: bool,
 }
 
 impl Config {
@@ -22,6 +23,7 @@ impl Config {
         let mut in_file: PathBuf = PathBuf::new();
         let mut out_file: Option<PathBuf> = None;
         let mut chunk_size: usize = 1024;
+        let mut no_max = false;
 
         // If the user provides no arguments at all or puts the help argument anywhere then print help text and exit
         if argstr.iter().any(|a| a == "-h" || a == "--help") {
@@ -63,6 +65,10 @@ impl Config {
                     out_file = Some(PathBuf::from(val));
                 }
 
+                "-nm" | "--nomax" => {
+                    no_max = true;
+                }
+
                 _ => return Err(format!("Unknown parameter: '{:?}'", arg)),
             }
         }
@@ -71,6 +77,7 @@ impl Config {
             fp_in: in_file,
             fp_out: out_file,
             chunk_size,
+            no_max
         });
     }
 
@@ -83,8 +90,9 @@ impl Config {
         Options:
             [-v | --version]: Display the current application version
             [-h | --help]: Display this help text
-            [-o <value> | --output<value>]: Sets the output file name. Default value is the same as the input file's name
-            [--chunksize <value>]: Sets the file chunking size to <value> number of bytes. Default value is 1024
+            [-o <value> | --output<value>]: Sets the output file name. Default value is the same as the input file's name.
+            [--chunksize <value>]: Sets the file chunking size to <value> number of bytes. Default value is 1024.
+            [-nm | --nomax]: Disables the iteration safety limit. Only relevant for very large files.
 
         Example:
             encrypt passwords.txt -o secret --chunksize 2048

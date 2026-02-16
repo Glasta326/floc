@@ -15,9 +15,12 @@
                 ]
             },
             "args": [
+                "e",
                 "test_resources/FileThatExistsTxt.txt",
                 "--chunksize",
-                "15"
+                "15",
+                "-o",
+                "test_resources/Output"
             ]
         },
         {

@@ -3,7 +3,10 @@ use std::{
     io::{BufReader, BufWriter, Read, Write},
 };
 
-use crate::{config_gen::Config, encryption};
+use crate::{
+    config_gen::Config,
+    encryption::{self, ceaser_cipher::decrypt_data_chunk},
+};
 
 // Takes data chunks from the input file and performs the encryption on them, and then writes them to the output file.
 pub fn encrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result<(), String> {
@@ -17,7 +20,7 @@ pub fn encrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result
 
     // First write in the metadata chunk, which is just file name and extension:
 
-    let mut metadata: Vec<u8> = generate_metadata(&cfg);
+    let mut metadata: Vec<u8> = generate_metadata_bytes(&cfg);
     let metadata_bytes = write_to_output(out_file, &metadata)?;
     println!("Wrote {} bytes of metadata", metadata_bytes);
 
@@ -25,11 +28,11 @@ pub fn encrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result
         // When there are 0 bytes left to read that means EOF and we should exit
         let bytes_read = reader.read(&mut data_buffer).unwrap();
         if bytes_read == 0 {
-            break;
+            break; // EOF
         }
 
         let processed_data =
-            encryption::ceaser_cipher::encrypt_data_chunk(&data_buffer[0..bytes_read], cfg);
+            encryption::ceaser_cipher::encrypt_data_chunk(&data_buffer[0..bytes_read], &cfg);
 
         let bytes_written = write_to_output(out_file, &processed_data)?;
         println!("{} bytes written to file", bytes_written);
@@ -44,8 +47,13 @@ pub fn encrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result
     return Ok(());
 }
 
-// File metadata is essentially just [has_ext][name bytes][null][ext bytes?][null?][data...]
-pub fn generate_metadata(cfg: &Config) -> Vec<u8> {
+// File storage layout will be [metadata_len][metadata_chunk][data...]
+// metadata_len is a single byte at the start telling us how long the metadata chunk is
+// metadata_chunk will be the whole filestring "ThisIsAFile.txt", encrypted via same algorithm as the data
+// now that string can be arbitrary size compared to the other chunks of the program, as it should never be overly large
+// after that, we insert a singular null to seperate the metadata from the data
+// then rest of file is read as data via chunking
+pub fn generate_metadata_bytes(cfg: &Config) -> Vec<u8> {
     let mut output: Vec<u8> = Vec::new();
 
     // Write whether this file has an extension
@@ -65,6 +73,60 @@ pub fn generate_metadata(cfg: &Config) -> Vec<u8> {
     }
 
     return output;
+}
+
+pub fn decrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result<(), String> {
+    let mut data_buffer: Vec<u8> = vec![0u8; cfg.chunk_size];
+    let mut reader = BufReader::new(in_file);
+    let mut iter_count = 0;
+    let mut metadata_complete = false;
+
+    // With "no limits", we use usize max just as a final safety net still
+    // 1_000_000 default limit with default chunk size of 1kb means default limit is a 1gb file which is reasonable
+    let iter_limit = { if cfg.no_max { usize::MAX } else { 1_000_000 } };
+
+    while iter_count < iter_limit {
+        let bytes_read = reader.read(&mut data_buffer).unwrap();
+        if bytes_read == 0 {
+            break; //EOF
+        }
+
+        let processed_chunk =
+            encryption::ceaser_cipher::decrypt_data_chunk(&data_buffer[0..bytes_read], &cfg);
+
+        if !metadata_complete {
+            extract_metadata(&mut processed_chunk, &cfg);
+        }
+    }
+
+    return 0;
+}
+
+struct Metadata {
+    has_ext: bool,
+    file_name: String,
+    file_ext: Option<String>,
+}
+
+pub fn extract_metadata(reader: &BufReader<&File>, data: &mut [u8], cfg: &Config) -> Result<(), String> {
+    // Read first byte to know how long metadata chunk is
+    // first byte is never encrypted
+    let mut byte_buffer = [0u8; 1];
+    reader.read_exact(&mut byte_buffer);
+
+    let mut metadata_buffer = vec![0u8; byte_buffer[0] as usize];
+    reader.read_exact(&mut metadata_buffer);
+
+    let processed_metadata = decrypt_data_chunk(&metadata_buffer, &cfg);
+
+    let filename = match String::from_utf8(processed_metadata){
+        Ok(s) => s,
+        Err(e) => return Err(e.to_string())
+    };
+
+
+    
+    return 0;
 }
 
 pub fn write_to_output(out_file: &mut File, data: &[u8]) -> Result<usize, String> {

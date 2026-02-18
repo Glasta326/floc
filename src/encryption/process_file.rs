@@ -73,8 +73,8 @@ fn generate_metadata_bytes(cfg: &Config) -> Result<Vec<u8>, String> {
 
     // Calculate metadata length
     let mut len = 0;
-    len += cfg.file_name.len();
-    match &cfg.file_ext {
+    len += cfg.in_file_name.len();
+    match &cfg.in_file_ext {
         Some(x) => {
             len += x.len();
             len += 1 // Account for the '.'
@@ -89,10 +89,10 @@ fn generate_metadata_bytes(cfg: &Config) -> Result<Vec<u8>, String> {
     }
 
     // write name
-    output.extend_from_slice(cfg.file_name.as_bytes());
+    output.extend_from_slice(cfg.in_file_name.as_bytes());
 
     // write cfg if applicable
-    match &cfg.file_ext {
+    match &cfg.in_file_ext {
         Some(v) => {
             output.push('.' as u8);
             output.extend_from_slice(v.as_bytes());
@@ -103,18 +103,20 @@ fn generate_metadata_bytes(cfg: &Config) -> Result<Vec<u8>, String> {
     return Ok(output);
 }
 
-pub fn decrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result<(), String> {
+pub fn decrypt_file(
+    in_reader: &mut BufReader<&File>,
+    out_file: &mut File,
+    cfg: &Config,
+) -> Result<(), String> {
     let mut data_buffer: Vec<u8> = vec![0u8; cfg.chunk_size];
-    let mut reader = BufReader::new(in_file);
     let mut iter_count = 0;
-    let mut metadata_complete = false;
 
     // With "no limits", we use usize max just as a final safety net still
     // 1_000_000 default limit with default chunk size of 1kb means default limit is a 1gb file which is reasonable
     let iter_limit = { if cfg.no_max { usize::MAX } else { 1_000_000 } };
 
     while iter_count < iter_limit {
-        let bytes_read = reader.read(&mut data_buffer).unwrap();
+        let bytes_read = in_reader.read(&mut data_buffer).unwrap();
         if bytes_read == 0 {
             break; //EOF
         }
@@ -122,25 +124,27 @@ pub fn decrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result
         let processed_chunk =
             encryption::ceaser_cipher::decrypt_data_chunk(&data_buffer[0..bytes_read], &cfg);
 
-        if !metadata_complete {
-            //extract_metadata(&mut processed_chunk, &cfg);
-        }
+        iter_count += 1;
     }
 
     return Ok(());
 }
 
-struct Metadata {
-    has_ext: bool,
-    file_name: String,
-    file_ext: Option<String>,
+pub struct Metadata {
+    pub file_name: String,
+    pub file_ext: Option<String>,
 }
 
-pub fn extract_metadata(
-    reader: &mut BufReader<&File>,
-    data: &mut [u8],
-    cfg: &Config,
-) -> Result<(), String> {
+impl Metadata {
+    pub fn new(name: String, ext: Option<String>) -> Self {
+        return Metadata {
+            file_name: (name),
+            file_ext: (ext),
+        };
+    }
+}
+
+pub fn extract_metadata(reader: &mut BufReader<File>, cfg: &Config) -> Result<Metadata, String> {
     // Read first byte to know how long metadata chunk is
     // first byte is never encrypted
     let mut byte_buffer = [0u8; 1];
@@ -151,12 +155,62 @@ pub fn extract_metadata(
 
     let processed_metadata = decrypt_data_chunk(&metadata_buffer, &cfg);
 
-    let filename = match String::from_utf8(processed_metadata) {
+    let mut full_filename = match String::from_utf8(processed_metadata) {
         Ok(s) => s,
         Err(e) => return Err(e.to_string()),
     };
 
-    return Ok(());
+    let ext_index = scan_backwards(&full_filename, '.');
+
+    let mut file_name = String::new();
+    let mut file_ext: Option<String> = None;
+
+    // If we found the . for the extension, split the filename at that
+    // otherwise there must be no extension so we use the whole thing as the filename
+    match ext_index {
+        Some(i) => {
+            file_ext = Some(full_filename.split_off(i));
+            // TODO: we need file_ext = file_ext[1..file_ext.len()]
+            file_name = full_filename;
+        }
+        None => {
+            file_name = full_filename;
+        }
+    }
+
+    return Ok(Metadata::new(file_name, file_ext));
+}
+
+/// Scans a target string for a given character starting from the end and moving towards the start
+///
+/// # Arguments
+///
+/// * `data` - The target string to search through
+/// * `target` - The character being searched for
+///
+/// # Returns
+///
+/// * [`usize`] - the found index of the target
+/// * [`None`] - if the target could not be found
+///
+/// # Examples
+/// ```
+/// // Find starting index of file extension
+/// let file_name = "target.txt".to_String();
+/// let index = scan_backwards(&file_name, '.');
+///
+/// assert_eq!(index, 7);
+/// ```
+fn scan_backwards(data: &String, target: char) -> Option<usize> {
+    let mut arr = data.char_indices();
+
+    while let Some(c) = arr.next_back() {
+        if c.1 == target {
+            return Some(c.0);
+        }
+    }
+
+    return None;
 }
 
 pub fn write_to_output(out_file: &mut File, data: &[u8]) -> Result<usize, String> {
@@ -176,8 +230,8 @@ mod tests {
     use crate::{config_gen::Config, encryption::process_file::generate_metadata_bytes};
 
     #[test]
-    fn test_encrypt_file(){
-       // TODO
+    fn test_encrypt_file() {
+        // TODO
     }
 
     #[test]
@@ -186,8 +240,10 @@ mod tests {
             encryption_mode: false,
             fp_in: PathBuf::new(),
             fp_out: None,
-            file_name: "FileThatExistsTxt".to_string(),
-            file_ext: Some("txt".to_string()),
+            in_file_name: "FileThatExistsTxt".to_string(),
+            in_file_ext: Some("txt".to_string()),
+            out_file_name: None,
+            out_file_ext: None,
             chunk_size: 1024,
             no_max: false,
         };
@@ -206,7 +262,7 @@ mod tests {
         );
 
         // Blank file name
-        cfg.file_name = "".to_string();
+        cfg.in_file_name = "".to_string();
         let expected = vec![4, 46, 116, 120, 116];
         let actual = generate_metadata_bytes(&cfg).unwrap();
         assert!(
@@ -217,8 +273,8 @@ mod tests {
         );
 
         // No Extension
-        cfg.file_name = "FileThatExistsTxt".to_string();
-        cfg.file_ext = None;
+        cfg.in_file_name = "FileThatExistsTxt".to_string();
+        cfg.in_file_ext = None;
         let expected = vec![
             17, 70, 105, 108, 101, 84, 104, 97, 116, 69, 120, 105, 115, 116, 115, 84, 120, 116,
         ];
@@ -231,14 +287,14 @@ mod tests {
         );
 
         // Too long filename
-        cfg.file_name = "1234567890".repeat(26);
-        cfg.file_ext = Some("png".to_string());
+        cfg.in_file_name = "1234567890".repeat(26);
+        cfg.in_file_ext = Some("png".to_string());
         let actual = generate_metadata_bytes(&cfg);
         assert!(
             actual.is_err(),
             "Filename too long test:\nDid not err with input: [file_name: {}, file_ext: {}]\nAnd generated output: {:?}",
-            cfg.file_name,
-            cfg.file_ext.unwrap(),
+            cfg.in_file_name,
+            cfg.in_file_ext.unwrap(),
             actual.unwrap()
         );
     }

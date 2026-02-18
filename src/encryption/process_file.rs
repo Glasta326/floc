@@ -20,7 +20,7 @@ pub fn encrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result
 
     // First write in the metadata chunk, which is just file name and extension:
 
-    let mut metadata: Vec<u8> = generate_metadata_bytes(&cfg);
+    let mut metadata: Vec<u8> = generate_metadata_bytes(&cfg)?;
     let metadata_bytes = write_to_output(out_file, &metadata)?;
     println!("Wrote {} bytes of metadata", metadata_bytes);
 
@@ -38,7 +38,7 @@ pub fn encrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result
         println!("{} bytes written to file", bytes_written);
 
         // Ensure at minimum we are writing the same number of bytes as we read
-        assert!(bytes_written <= bytes_read, "Data was lost!");
+        debug_assert!(bytes_written <= bytes_read, "Data was lost!");
 
         iter_count += 1;
         println!("Iteration: {}", iter_count)
@@ -74,13 +74,18 @@ fn generate_metadata_bytes(cfg: &Config) -> Result<Vec<u8>, String> {
     // Calculate metadata length
     let mut len = 0;
     len += cfg.file_name.len();
-    let x = match cfg.file_ext {
-        Some(x) => len += x.len(),
+    match &cfg.file_ext {
+        Some(x) => {
+            len += x.len();
+            len += 1 // Account for the '.'
+        }
         None => {}
     };
 
     if len > 255 {
         return Err(format!("File metadata is too long"));
+    } else {
+        output.push(len as u8);
     }
 
     // write name
@@ -89,13 +94,13 @@ fn generate_metadata_bytes(cfg: &Config) -> Result<Vec<u8>, String> {
     // write cfg if applicable
     match &cfg.file_ext {
         Some(v) => {
+            output.push('.' as u8);
             output.extend_from_slice(v.as_bytes());
-            output.push(0x00);
         }
         None => {}
     }
 
-    return output;
+    return Ok(output);
 }
 
 pub fn decrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result<(), String> {
@@ -118,11 +123,11 @@ pub fn decrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result
             encryption::ceaser_cipher::decrypt_data_chunk(&data_buffer[0..bytes_read], &cfg);
 
         if !metadata_complete {
-            extract_metadata(&mut processed_chunk, &cfg);
+            //extract_metadata(&mut processed_chunk, &cfg);
         }
     }
 
-    return 0;
+    return Ok(());
 }
 
 struct Metadata {
@@ -132,7 +137,7 @@ struct Metadata {
 }
 
 pub fn extract_metadata(
-    reader: &BufReader<&File>,
+    reader: &mut BufReader<&File>,
     data: &mut [u8],
     cfg: &Config,
 ) -> Result<(), String> {
@@ -151,7 +156,7 @@ pub fn extract_metadata(
         Err(e) => return Err(e.to_string()),
     };
 
-    return 0;
+    return Ok(());
 }
 
 pub fn write_to_output(out_file: &mut File, data: &[u8]) -> Result<usize, String> {
@@ -161,5 +166,80 @@ pub fn write_to_output(out_file: &mut File, data: &[u8]) -> Result<usize, String
     match res {
         Ok(x) => return Ok(x),
         Err(x) => return Err(x.to_string()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{fs::File, path::PathBuf};
+
+    use crate::{config_gen::Config, encryption::process_file::generate_metadata_bytes};
+
+    #[test]
+    fn test_encrypt_file(){
+       // TODO
+    }
+
+    #[test]
+    fn test_gen_metadata() {
+        let mut cfg: Config = Config {
+            encryption_mode: false,
+            fp_in: PathBuf::new(),
+            fp_out: None,
+            file_name: "FileThatExistsTxt".to_string(),
+            file_ext: Some("txt".to_string()),
+            chunk_size: 1024,
+            no_max: false,
+        };
+
+        // Typical input
+        let expected = vec![
+            21, 70, 105, 108, 101, 84, 104, 97, 116, 69, 120, 105, 115, 116, 115, 84, 120, 116, 46,
+            116, 120, 116,
+        ];
+        let actual = generate_metadata_bytes(&cfg).unwrap();
+        assert!(
+            expected == actual,
+            "Standard metadata test:\nExpected value generated: {:?}\nActual value generated: {:?}",
+            expected,
+            actual
+        );
+
+        // Blank file name
+        cfg.file_name = "".to_string();
+        let expected = vec![4, 46, 116, 120, 116];
+        let actual = generate_metadata_bytes(&cfg).unwrap();
+        assert!(
+            expected == actual,
+            "Blank filename metadata test:\nExpected value generated: {:?}\nActual value generated: {:?}",
+            expected,
+            actual
+        );
+
+        // No Extension
+        cfg.file_name = "FileThatExistsTxt".to_string();
+        cfg.file_ext = None;
+        let expected = vec![
+            17, 70, 105, 108, 101, 84, 104, 97, 116, 69, 120, 105, 115, 116, 115, 84, 120, 116,
+        ];
+        let actual = generate_metadata_bytes(&cfg).unwrap();
+        assert!(
+            expected == actual,
+            "No extension test:\nExpected value generated: {:?}\nActual value generated: {:?}",
+            expected,
+            actual
+        );
+
+        // Too long filename
+        cfg.file_name = "1234567890".repeat(26);
+        cfg.file_ext = Some("png".to_string());
+        let actual = generate_metadata_bytes(&cfg);
+        assert!(
+            actual.is_err(),
+            "Filename too long test:\nDid not err with input: [file_name: {}, file_ext: {}]\nAnd generated output: {:?}",
+            cfg.file_name,
+            cfg.file_ext.unwrap(),
+            actual.unwrap()
+        );
     }
 }

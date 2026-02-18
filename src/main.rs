@@ -31,9 +31,10 @@ fn main() -> Result<(), String> {
     println!("-----------------------------------------");
 
     let input_file = file_handling::file_io::get_input_file(&program_cfg)?;
-    let mut output_file = file_handling::file_io::create_output_file(&program_cfg)?;
+    
 
     if program_cfg.encryption_mode {
+        let mut output_file = file_handling::file_io::create_output_file(&program_cfg)?;
         encryption::process_file::encrypt_file(&input_file, &mut output_file, &program_cfg)?;
     }
     else {

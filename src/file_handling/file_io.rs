@@ -52,24 +52,17 @@ pub fn create_output_file_from_metadata(
     program_cfg: &Config,
     file_metadata: &Metadata,
 ) -> Result<File, String> {
-    // initial output filename from metadata
-    // inital output directory from std::env
-    //
-    // if user provides a filename we replace that
-    // if user provides an extension we replace that
-    // if user provides a whole filepath too we replace that
-
     // Default output file from the metadata set in the current directory
     let mut default_folder = std::env::current_dir().unwrap();
     let mut out_path = default_folder.clone();
 
     // If the config does NOT provide a set output path OR there is no parent folder THEN use default folder
-    let mut replace_path = false;
     match &program_cfg.fp_out {
         Some(fp) => {
             // output flag has no parent folder:
             let parent_folder = fp.parent().unwrap_or(&default_folder);
             if parent_folder.to_string_lossy().into_owned() == "" {
+                out_path = fp.to_path_buf();
             } else {
                 out_path = fp.to_path_buf();
                 // NOTE: this will make out_path INCLUDE the file name aswell,
@@ -77,9 +70,13 @@ pub fn create_output_file_from_metadata(
                 // which is better readablility than doing .join(filename) as .join is meant for folder joining really
             }
         }
-        None => {}
+        None => {
+            // this gets overriden by .set_file_name down below
+            out_path = out_path.join("placeholder");
+        }
     }
 
+    // By default write in the file name and extension from the metadata
     out_path.set_file_name(&file_metadata.file_name);
     match &file_metadata.file_ext {
         Some(e) => {
@@ -87,5 +84,35 @@ pub fn create_output_file_from_metadata(
         }
         None => {}
     }
-    return Err("()".to_string());
+
+    // If name or ext is provided via config, then overwrite with that
+    if let Some(name) = &program_cfg.out_file_name {
+        set_file_stem(&mut out_path, name);
+    }
+
+    if let Some(ext) = &program_cfg.out_file_ext {
+        out_path.set_extension(ext);
+    }
+
+    let output_file = match File::create(&out_path) {
+        Ok(f) => f,
+        Err(e) => {
+            return Err(format!(
+                "Could not create output file at: [{}] Reason: {}",
+                out_path.to_string_lossy().into_owned(),
+                e
+            ));
+        }
+    };
+
+    return Ok(output_file);
+}
+
+fn set_file_stem(path: &mut PathBuf, new_stem: &str) {
+    let new_name = match path.extension() {
+        Some(ext) => format!("{new_stem}.{}", ext.to_string_lossy()),
+        None => new_stem.to_string(),
+    };
+
+    path.set_file_name(new_name);
 }

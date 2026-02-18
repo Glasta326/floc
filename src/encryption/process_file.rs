@@ -31,10 +31,10 @@ pub fn encrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result
             break; // EOF
         }
 
-        let processed_data =
+        let processed_chunk =
             encryption::ceaser_cipher::encrypt_data_chunk(&data_buffer[0..bytes_read], &cfg);
 
-        let bytes_written = write_to_output(out_file, &processed_data)?;
+        let bytes_written = write_to_output(out_file, &processed_chunk)?;
         println!("{} bytes written to file", bytes_written);
 
         // Ensure at minimum we are writing the same number of bytes as we read
@@ -70,6 +70,7 @@ pub fn encrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result
 /// * [`String`] - Error message
 fn generate_metadata_bytes(cfg: &Config) -> Result<Vec<u8>, String> {
     let mut output: Vec<u8> = Vec::new();
+    let mut name_chunk: Vec<u8> = Vec::new();
 
     // Calculate metadata length
     let mut len = 0;
@@ -89,22 +90,25 @@ fn generate_metadata_bytes(cfg: &Config) -> Result<Vec<u8>, String> {
     }
 
     // write name
-    output.extend_from_slice(cfg.in_file_name.as_bytes());
+    name_chunk.extend_from_slice(cfg.in_file_name.as_bytes());
 
     // write cfg if applicable
     match &cfg.in_file_ext {
-        Some(v) => {
-            output.push('.' as u8);
-            output.extend_from_slice(v.as_bytes());
+        Some(ext) => {
+            name_chunk.push('.' as u8);
+            name_chunk.extend_from_slice(ext.as_bytes());
         }
         None => {}
     }
+    
+    let encrypted_result = encryption::ceaser_cipher::encrypt_data_chunk(&name_chunk, &cfg);
+    output.extend_from_slice(&encrypted_result);
 
     return Ok(output);
 }
 
 pub fn decrypt_file(
-    in_reader: &mut BufReader<&File>,
+    in_reader: &mut BufReader<File>,
     out_file: &mut File,
     cfg: &Config,
 ) -> Result<(), String> {
@@ -124,6 +128,15 @@ pub fn decrypt_file(
         let processed_chunk =
             encryption::ceaser_cipher::decrypt_data_chunk(&data_buffer[0..bytes_read], &cfg);
 
+
+        let bytes_written = write_to_output(out_file, &processed_chunk)?;
+        println!("{} bytes written to file", bytes_written);
+
+        // Ensure at minimum we are writing the same number of bytes as we read
+        debug_assert!(bytes_written <= bytes_read, "Data was lost!");
+
+        iter_count += 1;
+        println!("Iteration: {}", iter_count);
         iter_count += 1;
     }
 
@@ -169,8 +182,12 @@ pub fn extract_metadata(reader: &mut BufReader<File>, cfg: &Config) -> Result<Me
     // otherwise there must be no extension so we use the whole thing as the filename
     match ext_index {
         Some(i) => {
-            file_ext = Some(full_filename.split_off(i));
-            // TODO: we need file_ext = file_ext[1..file_ext.len()]
+            // Split the filename at the '.' and remove the '.' from the result
+            let mut t = full_filename.split_off(i);
+            t.remove(0);
+            file_ext = Some(t);
+
+
             file_name = full_filename;
         }
         None => {

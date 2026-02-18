@@ -1,7 +1,7 @@
 use std::{
     fs::File,
     io::{BufReader, Read, Write},
-    os::unix::fs::FileExt,
+    os::unix::{fs::FileExt, process},
 };
 
 use crate::config_gen::Config;
@@ -53,8 +53,14 @@ fn main() -> Result<(), String> {
             encryption::process_file::extract_metadata(&mut in_file_reader, &program_cfg)?;
 
         //let output_file = file_handling::file_io::create_output_file(&program_cfg);
-        let output_file =
-            file_handling::file_io::create_output_file_from_metadata(&program_cfg, &file_data);
+        let mut output_file =
+            file_handling::file_io::create_output_file_from_metadata(&program_cfg, &file_data)?;
+
+        encryption::process_file::decrypt_file(
+            &mut in_file_reader,
+            &mut output_file,
+            &program_cfg,
+        )?;
     }
 
     Ok(())

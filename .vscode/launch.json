@@ -14,21 +14,14 @@
                     "--bin=rsa_encrypter",
                 ]
             },
-            /*
-            "args": [
-                "e",
-                "test_resources/FileThatExistsTxt.txt",
-                "--chunksize",
-                "15",
-                "-o",
-                "/home/Glasta/Projects/rsa_encrypter/test_resources/Output"
-            ]*/
-
+            
             "args": [
                 "d",
                 "test_resources/Output.rsa",
+                "--chunksize",
+                "15",
                 "-o",
-                "test_resources/myfile.txt"
+                "/home/Glasta/Projects/rsa_encrypter/test_resources/Decrypted"
             ]
         },
         {

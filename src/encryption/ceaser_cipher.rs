@@ -1,7 +1,6 @@
 use crate::config_gen::Config;
 
-// TODO: encrypt
-// Does nothing to the data for now
+// TODO: real secure algorithm like RSA
 pub fn encrypt_data_chunk(data: &[u8], cfg: &Config) -> Vec<u8> {
     println!("Encrypting {} bytes...", &data.len());
 

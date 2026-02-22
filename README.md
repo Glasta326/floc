@@ -6,7 +6,7 @@ A simple CLI tool for encrypting and decrypting files
 
 **Features**
 
- - Chunk-based processing so arbitrary sized files can be processed
+ - Chunk-based processing so arbitrary sized files can be processed while keeping RAM usage light
  - encrypted file metadata, so decryption restores the original file's name and filetype
  - option to override any decryption metadata and specify file output 
 

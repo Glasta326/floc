@@ -5,13 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug executable 'rsa_encrypter'",
+            "name": "Debug executable 'floc'",
             "type": "lldb",
             "request": "launch",
             "cargo": {
                 "args": [
                     "run",
-                    "--bin=rsa_encrypter",
+                    "--bin=floc",
                 ]
             },
             
@@ -21,17 +21,17 @@
                 "--chunksize",
                 "15",
                 "-o",
-                "/home/Glasta/Projects/rsa_encrypter/test_resources/Decrypted"
+                "/home/Glasta/Projects/floc/test_resources/Decrypted"
             ]
         },
         {
-            "name": "Debug unit tests in executable 'rsa_encrypter'",
+            "name": "Debug unit tests in executable 'floc'",
             "type": "lldb",
             "request": "launch",
             "cargo": {
                 "args": [
                     "test",
-                    "--bin=rsa_encrypter"
+                    "--bin=floc"
                 ]
             }
         }

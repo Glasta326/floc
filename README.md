@@ -21,7 +21,7 @@ A simple CLI tool for encrypting and decrypting files
 For now, just clone the repo and build from source:
 
 ```bash
-git clone https://github.com/Glasta326/rsa_encrypter.git
+git clone https://github.com/Glasta326/floc.git
 cd floc
 cargo build --release
 ```

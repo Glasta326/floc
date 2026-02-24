@@ -20,7 +20,7 @@ impl key_data {
         let n = &prime1 * &prime2;
         let r = (&prime1 - 1u8) * (&prime2 - 1u8);
         let e = BigUint::from(3 as u32);
-        let d = e.modinv(&r).unwrap();
+        let d = e.modinv(&r).unwrap(); //aka phi
         return key_data {
             p: (prime1),
             q: (prime2),
@@ -30,4 +30,9 @@ impl key_data {
             d: (d),
         };
     }
+
+    
 }
+
+// ecryption: ((message) ^ e) * mod n
+// ecryption: ((ciphertext) ^ d) * mod n

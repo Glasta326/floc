@@ -17,7 +17,7 @@ fn main() -> Result<(), String> {
 
     
 
-
+    println!("{}",x.d);
 
     return Err("()".to_string());
     let mut program_cfg = config_gen::Config::parse_config()?;

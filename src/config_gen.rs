@@ -4,6 +4,8 @@ use std::{
     process::exit,
 };
 
+use num_bigint::BigUint;
+
 /// Program configuration struct
 /// Holds data about all the settings the user ran this program with, as well as useful context like the target file's name, extension and ect
 pub struct Config {
@@ -33,6 +35,9 @@ pub struct Config {
 
     /// Controls the size limit safety check incase the program gets stuck in an endless loop
     pub no_max: bool,
+
+    /// Specified key for encryption/decryption
+    pub key: Option<String>
 }
 
 impl Config {
@@ -52,6 +57,8 @@ impl Config {
         let mut out_file_ext: Option<String> = None;
         let mut chunk_size: usize = 1024;
         let mut no_max = false;
+        let mut key: Option<String> = None;
+
 
         // If the user provides no arguments at all or puts the help argument anywhere then print help text and exit
         if argstr.iter().any(|a| a == "-h" || a == "--help") {
@@ -151,6 +158,7 @@ impl Config {
             out_file_name, // TODO: make these x_file_ext and _name's into impl functions that just extract from the fp_in/fp_out
             chunk_size,
             no_max,
+            key: None
         });
     }
 
@@ -173,9 +181,10 @@ impl Config {
                 Default value is the same as the input file's name.
             [--chunksize <value>]: Sets the file chunking size to <value> number of bytes. Default value is 1024.
             [-nm | --nomax]: Disables the iteration safety limit. Only relevant for very large files.
+            [-k<value> | --key <value>]: provide an external base64 key to proccess this file with.
 
         Examples:
-            rsa encrypt passwords.txt -o secret --chunksize 2048
+            rsa encrypt passwords.txt -o secret --chunksize 2048 --key l33tp455w0rD
             rsa d data.rsa -nm -o secret
 
         Detailed example:

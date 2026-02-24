@@ -5,12 +5,13 @@ use std::{
 
 use crate::{
     config_gen::Config,
-    encryption::{self, ceaser_cipher::decrypt_data_chunk},
+    encryption::{self, rsa::decrypt_data_chunk},
 };
 
 // Takes data chunks from the input file and performs the encryption on them, and then writes them to the output file.
 pub fn encrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result<(), String> {
-    let mut data_buffer: Vec<u8> = vec![0u8; cfg.chunk_size];
+    return Err("()".to_string());
+   /*  let mut data_buffer: Vec<u8> = vec![0u8; cfg.chunk_size];
     let mut reader = BufReader::new(in_file);
     let mut iter_count = 0;
 
@@ -32,7 +33,7 @@ pub fn encrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result
         }
 
         let processed_chunk =
-            encryption::ceaser_cipher::encrypt_data_chunk(&data_buffer[0..bytes_read], &cfg);
+            encryption::rsa::encrypt_data_chunk(&data_buffer[0..bytes_read], &cfg);
 
         let bytes_written = write_to_output(out_file, &processed_chunk)?;
         println!("{} bytes written to file", bytes_written);
@@ -44,7 +45,7 @@ pub fn encrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result
         println!("Iteration: {}", iter_count)
     }
 
-    return Ok(());
+    return Ok(()); */
 }
 
 // File storage layout will be [metadata_len][metadata_chunk][data...]
@@ -69,6 +70,9 @@ pub fn encrypt_file(in_file: &File, out_file: &mut File, cfg: &Config) -> Result
 /// * [`Vec<u8>`] - Vec of bytes. Formatted: [metadata_Length][metadata]
 /// * [`String`] - Error message
 fn generate_metadata_bytes(cfg: &Config) -> Result<Vec<u8>, String> {
+    return Err("()".to_string());
+
+    /*
     let mut output: Vec<u8> = Vec::new();
     let mut name_chunk: Vec<u8> = Vec::new();
 
@@ -101,10 +105,11 @@ fn generate_metadata_bytes(cfg: &Config) -> Result<Vec<u8>, String> {
         None => {}
     }
     
-    let encrypted_result = encryption::ceaser_cipher::encrypt_data_chunk(&name_chunk, &cfg);
+    let encrypted_result = encryption::rsa::encrypt_data_chunk(&name_chunk, &cfg);
     output.extend_from_slice(&encrypted_result);
 
     return Ok(output);
+     */
 }
 
 pub fn decrypt_file(
@@ -112,6 +117,8 @@ pub fn decrypt_file(
     out_file: &mut File,
     cfg: &Config,
 ) -> Result<(), String> {
+    return Err("()".to_string());
+    /* 
     let mut data_buffer: Vec<u8> = vec![0u8; cfg.chunk_size];
     let mut iter_count = 0;
 
@@ -126,7 +133,7 @@ pub fn decrypt_file(
         }
 
         let processed_chunk =
-            encryption::ceaser_cipher::decrypt_data_chunk(&data_buffer[0..bytes_read], &cfg);
+            encryption::rsa::decrypt_data_chunk(&data_buffer[0..bytes_read], &cfg);
 
 
         let bytes_written = write_to_output(out_file, &processed_chunk)?;
@@ -141,6 +148,7 @@ pub fn decrypt_file(
     }
 
     return Ok(());
+    */
 }
 
 pub struct Metadata {
@@ -158,6 +166,9 @@ impl Metadata {
 }
 
 pub fn extract_metadata(reader: &mut BufReader<File>, cfg: &Config) -> Result<Metadata, String> {
+
+    return Err("()".to_string());
+    /* 
     // Read first byte to know how long metadata chunk is
     // first byte is never encrypted
     let mut byte_buffer = [0u8; 1];
@@ -196,6 +207,7 @@ pub fn extract_metadata(reader: &mut BufReader<File>, cfg: &Config) -> Result<Me
     }
 
     return Ok(Metadata::new(file_name, file_ext));
+    */
 }
 
 /// Scans a target string for a given character starting from the end and moving towards the start
@@ -263,6 +275,7 @@ mod tests {
             out_file_ext: None,
             chunk_size: 1024,
             no_max: false,
+            key: None
         };
 
         // Typical input

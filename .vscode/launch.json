@@ -21,7 +21,7 @@
                 "--chunksize",
                 "15",
                 "-o",
-                "/home/Glasta/Projects/floc/test_resources/Decrypted"
+                "test_resources/Decrypted"
             ]
         },
         {

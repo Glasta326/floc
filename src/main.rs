@@ -4,13 +4,22 @@ use std::{
     os::unix::{fs::FileExt, process},
 };
 
-use crate::config_gen::Config;
+use num_bigint::BigUint;
+
+use crate::{config_gen::Config, encryption::rsa};
 
 mod config_gen;
 mod encryption;
 mod file_handling;
 
 fn main() -> Result<(), String> {
+    let x = encryption::key_data::new(BigUint::from(11u32), BigUint::from(3u32));
+
+    
+
+
+
+    return Err("()".to_string());
     let mut program_cfg = config_gen::Config::parse_config()?;
 
     // Display parsed config

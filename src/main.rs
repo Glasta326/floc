@@ -13,11 +13,16 @@ mod encryption;
 mod file_handling;
 
 fn main() -> Result<(), String> {
-    let x = encryption::key_data::new(BigUint::from(11u32), BigUint::from(3u32));
 
-    
+    let x = encryption::key_data::new(BigUint::from(1000003u32), BigUint::from(1000033u32));
 
-    println!("{}",x.d);
+    let message = BigUint::from_bytes_le(&[255, 1]);
+
+    let result = rsa::encrypt_data_chunk(&message.to_bytes_le(), &x);
+
+    let decrypted = rsa::decrypt_data_chunk(&result, &x);
+
+    let out_message = BigUint::from_bytes_le(&decrypted);
 
     return Err("()".to_string());
     let mut program_cfg = config_gen::Config::parse_config()?;

@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{ops::Mul, str::FromStr};
 
 use num_bigint::BigUint;
 
@@ -10,22 +10,22 @@ pub struct key_data {
     pub p: BigUint,
     pub q: BigUint,
     pub n: BigUint,
-    pub r: BigUint,
+    pub phi: BigUint,
     pub e: BigUint,
     pub d: BigUint,
 }
 
 impl key_data {
-    pub fn new(prime1: BigUint, prime2: BigUint) -> Self {
-        let n = &prime1 * &prime2;
-        let r = (&prime1 - 1u8) * (&prime2 - 1u8);
-        let e = BigUint::from(3 as u32);
-        let d = e.modinv(&r).unwrap(); //aka phi
+    pub fn new(p: BigUint, q: BigUint) -> Self {
+        let n = &p * &q;
+        let phi = (&p - 1u8) * (&q - 1u8);
+        let e = BigUint::from(65537 as u32);
+        let d = BigUint::modinv(&e, &phi).unwrap();
         return key_data {
-            p: (prime1),
-            q: (prime2),
+            p: (p),
+            q: (q),
             n: (n),
-            r: (r),
+            phi: (phi),
             e: (e),
             d: (d),
         };

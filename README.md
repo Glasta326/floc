@@ -1,6 +1,6 @@
 # floc
 
-A simple CLI tool for encrypting and decrypting files
+A simple CLI tool for encrypting and decrypting files built almost entirely from the ground up with NO external cryptography libraries
 
 As of 06/03/2026, this project is still unfinished and should not be used for security
 

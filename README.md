@@ -1,6 +1,7 @@
 # floc
 
 A simple CLI tool for encrypting and decrypting files
+As of 06/03/2026, this project is still unfinished and should not be used for security
 
 ## Overview
 
@@ -12,7 +13,7 @@ A simple CLI tool for encrypting and decrypting files
 
 **Future TODOs**
 
- - Proper RSA implementation using keys
+ - Further security enhancements: Salting, padding, ect..
  - Support for providing a target key to ecrypt with so files can be sent to other users via CLI
  - Multithreaded data loading and chunking (Noticable wait times to retrieve data when using larger chunksizes)
 
